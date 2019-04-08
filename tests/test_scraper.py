@@ -7,9 +7,9 @@ try:
 except NameError:
     basestring = (str, bytes)
 
-from play_scraper import settings
-from play_scraper.lists import CATEGORIES
-from play_scraper.scraper import PlayScraper
+from playmate import settings
+from playmate.lists import CATEGORIES
+from playmate.scraper import PlayScraper
 
 
 BASIC_KEYS = {

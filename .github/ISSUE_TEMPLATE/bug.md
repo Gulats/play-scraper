@@ -22,7 +22,7 @@ If applicable, add screenshots to help explain your problem.
 **Desktop (please complete the following information):**
  - OS: [e.g. macOS 10.14]
  - Python Version [e.g. 3.7.2]
- - play_scraper Version [e.g. 0.5.1]
+ - playmate Version [e.g. 0.5.1]
 
 **Additional context**
 Add any other context about the problem here.

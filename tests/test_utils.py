@@ -3,9 +3,9 @@
 import unittest
 import logging
 
-import play_scraper.settings as s
-from play_scraper.lists import CATEGORIES, COLLECTIONS, AGE_RANGE
-from play_scraper.utils import (
+import playmate.settings as s
+from playmate.lists import CATEGORIES, COLLECTIONS, AGE_RANGE
+from playmate.utils import (
     build_url,
     build_collection_url,
     generate_post_data,

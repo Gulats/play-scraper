@@ -11,8 +11,9 @@ except ImportError:
 import requests
 from bs4 import BeautifulSoup
 from requests_futures.sessions import FuturesSession
+from pydash import omit
 
-from play_scraper import settings as s
+from playmate import settings as s
 
 log = logging.getLogger(__name__)
 
@@ -87,43 +88,6 @@ def build_collection_url(category='', collection=''):
         collection=collection)
 
     return url
-
-
-def send_request(method, url, data=None, params=None, headers=None,
-                 timeout=30, verify=True, allow_redirects=False):
-    """Sends a request to the url and returns the response.
-
-    :param method: HTTP method to use.
-    :param url: URL to send.
-    :param data: Dictionary of post data to send.
-    :param headers: Dictionary of headers to include.
-    :param timeout: number of seconds before timing out the request
-    :param verify: a bool for requesting SSL verification.
-    :return: a Response object.
-    """
-    data = {} if data is None else data
-    params = {} if params is None else params
-    headers = default_headers() if headers is None else headers
-    if not data and method == 'POST':
-        data = generate_post_data()
-
-    try:
-        response = requests.request(
-            method=method,
-            url=url,
-            data=data,
-            params=params,
-            headers=headers,
-            timeout=timeout,
-            verify=verify,
-            allow_redirects=allow_redirects)
-        if not response.status_code == requests.codes.ok:
-            response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        log.error(e)
-        raise
-
-    return response
 
 
 def parse_additional_info(soup):
@@ -398,51 +362,19 @@ def parse_card_info(soup):
     }
 
 
-def parse_app_details_response_hook(response, *args, **kwargs):
-    """
-    Requests futures hook function to asynchronously parse app details as the
-    responses are received. Mimics the `details` api.
-    """
-    if not response.status_code == requests.codes.ok:
-        response.raise_for_status()
-    soup = BeautifulSoup(response.content, 'lxml', from_encoding='utf8')
-    details = parse_app_details(soup)
-    response.app_details_data = details
+def pruned(unwanted_keys):
+    def decorate(func):
+        async def execute(*args, **kwargs):
+            opt = await func(*args, **kwargs)
+            return prune_keys(opt, unwanted_keys)
+        return execute
+    return decorate
 
 
-def multi_futures_app_request(app_ids, headers=None, verify=True, params=None,
-                              workers=s.CONCURRENT_REQUESTS):
-    """
-    :param app_ids: a list of app IDs.
-    :param headers: a dictionary of custom headers to use.
-    :param verify: bool for requesting SSL verification.
-    :return: a list of all apps' detail data
-    """
-    session = FuturesSession(max_workers=workers)
-
-    headers = default_headers() if headers is None else headers
-    responses = [session.get(build_url('details', app_id),
-                             headers=headers,
-                             verify=verify,
-                             params=params,
-                             hooks={
-                                 'response': parse_app_details_response_hook,
-                             })
-                 for app_id in app_ids]
-
-    apps = []
-    for i, response in enumerate(responses):
-        try:
-            result = response.result()
-            app_json = result.app_details_data
-            app_json.update({
-                'app_id': app_ids[i],
-                'url': result.url,
-            })
-            apps.append(response.result().app_details_data)
-        except requests.exceptions.RequestException as e:
-            log.error('Error occurred fetching {app}: {err}'.format(
-                app=app_ids[i],
-                err=str(e)))
-
-    return apps
+def prune_keys(data:dict, unwanted_keys) -> dict:
+    if isinstance(data, dict):
+        return omit(data, *unwanted_keys)
+    elif isinstance(data, list):
+        return list(map(lambda d: prune_keys(d, unwanted_keys), data))
+    else:
+        return data
