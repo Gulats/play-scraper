@@ -26,8 +26,7 @@ class PlayMate(Scraper_):
 		return self
 
 	async def __aexit__(self, *err):
-		await self._session.close()
-		self._session = None
+		await self.close()
 
 	async def close(self):
 		if self._session and not self._session.closed:
